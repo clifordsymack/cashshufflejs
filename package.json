@@ -1,0 +1,17 @@
+{
+  "name": "cashshuffle",
+  "version": "0.1.0",
+  "description": "cashshuffle implementation in javascript",
+  "main": "./index.js",
+  "scripts": {
+    "test": "node index.js"
+  },
+  "keywords": [
+    "cashshuffle"
+  ],
+  "author": "Cliford Symack",
+  "license": "ISC",
+  "dependencies": {
+    "protobufjs": "^6.8.8"
+  }
+}
