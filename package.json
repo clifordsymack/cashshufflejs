@@ -4,7 +4,7 @@
   "description": "cashshuffle implementation in javascript",
   "main": "./index.js",
   "scripts": {
-    "test": "node index.js"
+    "test": "node connections.js"
   },
   "keywords": [
     "cashshuffle"
