@@ -4,7 +4,7 @@
   "description": "cashshuffle implementation in javascript",
   "main": "./index.js",
   "scripts": {
-    "test": "node connections.js"
+    "test": "mocha \"test/**/*.coffee\""
   },
   "keywords": [
     "cashshuffle"
@@ -13,5 +13,9 @@
   "license": "ISC",
   "dependencies": {
     "protobufjs": "^6.8.8"
+  },
+  "devDependencies": {
+    "coffeescript": "^2.3.2",
+    "mocha": "^5.2.0"
   }
 }
