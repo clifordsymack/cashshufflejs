@@ -4,7 +4,7 @@
   "description": "cashshuffle implementation in javascript",
   "main": "./index.js",
   "scripts": {
-    "test": "mocha \"test/**/*.coffee\""
+    "test": "mocha \"test/messages.coffee\""
   },
   "keywords": [
     "cashshuffle"
@@ -12,7 +12,9 @@
   "author": "Cliford Symack",
   "license": "ISC",
   "dependencies": {
-    "protobufjs": "^6.8.8"
+    "bitcoincashjs-fork": "^1.0.3",
+    "protobufjs": "^6.8.8",
+    "sjcl": "^1.0.3"
   },
   "devDependencies": {
     "coffeescript": "^2.3.2",

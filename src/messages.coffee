@@ -1,6 +1,8 @@
 protobuf = require 'protobufjs'
+BchMessage = require('bitcoincashjs-fork').Message
 
 message_root = protobuf.loadSync("./protobuf/message.proto")
+
 
 Signed = message_root.lookupType "Signed"
 Packet = message_root.lookupType "Packet"
@@ -37,9 +39,21 @@ class Messages
             amount: amount
     @packets.packet.push message
 
-  formAllPackets: (eck, session, number, vkFrom, vkTo, phase)->
-    # TBD
-    return  
+  formAllPackets: (eck, session, number, vkFrom, vkTo, phase) ->
+    for packet in @packets.packet
+      packet.packet.phase = Phase.values[do phase.toUpperCase]
+      packet.packet.session = session
+      packet.packet.number = number
+      packet.packet.fromKey = VerificationKey.create {from_key: vkFrom}
+      if vkTo
+        packet.packet.toKey = VerificationKey.create {to_key: vkTo}
+      msg = Packet.encode packet.packet
+            .finish()
+            .toString 'base64'
+      sig = BchMessage msg
+            .sign eck
+      sig_bytes = Buffer.from sig, "base64"
+      packet.signature = Signature.create {signature: sig_bytes} 
 
 
 module.exports = Messages
