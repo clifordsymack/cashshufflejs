@@ -4,14 +4,7 @@ messages = require '../src/messages.coffee'
 BCH = require('bitcoincashjs-fork')
 
 eck = new BCH.PrivateKey("L23PpjkBQqpAF4vbMHNfTZAb3KFPBSawQ7KinFTzz7dxq6TZX8UA")
-
-# describe "temp", ->
-#
-#   it "just check some features", (done) ->
-#     pKey = new BCH.PrivateKey("L23PpjkBQqpAF4vbMHNfTZAb3KFPBSawQ7KinFTzz7dxq6TZX8UA")
-#     console.log(pKey)
-#     do done
-
+address = eck.toAddress().toString()
 
 describe "Messages", ->
 
@@ -30,7 +23,6 @@ describe "Messages", ->
     do done
 
   it 'should form a packet', (done) ->
-    # (eck, session, number, vkFrom, vkTo, phase)
     msgs = new messages
     session = new Buffer('somesession')
     number = 1
@@ -39,5 +31,10 @@ describe "Messages", ->
     phase = "announcement"
     msgs.makeGreeting "1", 1
     msgs.formAllPackets(eck, session, number, vkFrom, vkTo, phase)
-    console.log msgs.packets.packet[0]
+    for packet in msgs.packets.packet
+      eq packet.packet.session, session
+      eq packet.packet.number, number
+      eq packet.packet.fromKey.from_key, vkFrom
+      eq packet.packet.toKey.to_key, vkTo
+      # Add signature verification later!
     do done
