@@ -53,7 +53,40 @@ class Messages
       sig = BchMessage msg
             .sign eck
       sig_bytes = Buffer.from sig, "base64"
-      packet.signature = Signature.create {signature: sig_bytes} 
+      packet.signature = Signature.create {signature: sig_bytes}
 
+
+  # generalBlame: (accused) ->
+
+  addEncryptionKey: (ek, change) ->
+    packet =
+      Signed.create
+        packet: Packet.create
+          message: Message.create
+            key: EncryptionKey.create
+              key: ek
+    if change
+      packet.packet.message.address = Address.create {address: change}
+    @packets.packet.push packet
+
+
+  addInputs: (inputsObject) ->
+    packet = Signed.create
+      packet: Packet.create
+        message: Message.create
+          inputs: {}
+    for key, val of inputsObject
+      packet.packet.message.inputs[key] = Coins.create {coins: val}
+    @packets.packet.push packet
+
+  clearPackets: () ->
+    @packets = Packets.create {packet: []}
+
+  serialize: () ->
+    Packets.encode @packets
+    .finish()
+
+  deserialize: (buffer) ->
+    @packets = Packets.decode(buffer)
 
 module.exports = Messages

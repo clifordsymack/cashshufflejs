@@ -1,4 +1,6 @@
-{ equal: eq, throws } = require 'assert'
+# { equal: eq, throws } = require 'assert'
+assert = require 'assert'
+eq = assert.equal
 
 messages = require '../src/messages.coffee'
 BCH = require('bitcoincashjs-fork')
@@ -30,7 +32,7 @@ describe "Messages", ->
     vkTo = "key to"
     phase = "announcement"
     msgs.makeGreeting "1", 1
-    msgs.formAllPackets(eck, session, number, vkFrom, vkTo, phase)
+    msgs.formAllPackets eck, session, number, vkFrom, vkTo, phase
     for packet in msgs.packets.packet
       eq packet.packet.session, session
       eq packet.packet.number, number
@@ -38,3 +40,28 @@ describe "Messages", ->
       eq packet.packet.toKey.to_key, vkTo
       # Add signature verification later!
     do done
+
+  it 'should add an encryption key', (done) ->
+    msgs = new messages
+    ek = 'some encryption key'
+    change = 'some change'
+    msgs.addEncryptionKey(ek, null)
+    eq msgs.packets.packet[0].packet.message.key.key, ek
+    do msgs.clearPackets
+    msgs.addEncryptionKey(ek, change)
+    eq msgs.packets.packet[0].packet.message.key.key, ek
+    eq msgs.packets.packet[0].packet.message.address.address, change
+    do done
+
+  it 'should add an inputs', (done) ->
+    msgs = new messages
+    inputs =
+      'pubkey_1': [ "hash11", "hash12" ]
+      'pubkey_2': [ "hash21", "hash22" ]
+    msgs.addInputs inputs
+    for key, val of msgs.packets.packet[0].packet.message.inputs
+      assert key of inputs
+      eq val.coins, inputs[key]
+    do done
+
+    
