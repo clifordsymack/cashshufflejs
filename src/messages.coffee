@@ -44,9 +44,9 @@ class Messages
       packet.packet.phase = Phase.values[do phase.toUpperCase]
       packet.packet.session = session
       packet.packet.number = number
-      packet.packet.fromKey = VerificationKey.create {from_key: vkFrom}
+      packet.packet.fromKey = VerificationKey.create {key: vkFrom}
       if vkTo
-        packet.packet.toKey = VerificationKey.create {to_key: vkTo}
+        packet.packet.toKey = VerificationKey.create {key: vkTo}
       msg = Packet.encode packet.packet
             .finish()
             .toString 'base64'
@@ -78,6 +78,41 @@ class Messages
     for key, val of inputsObject
       packet.packet.message.inputs[key] = Coins.create {coins: val}
     @packets.packet.push packet
+
+  addStr: (str) ->
+    packet = Signed.create
+      packet: Packet.create
+        message: Message.create
+          str: str
+    @packets.packet.push packet
+
+  addHash: (hash) ->
+    packet = Signed.create
+      packet: Packet.create
+        message: Message.create
+          hash: Hash.create
+            hash: hash
+    @packets.packet.push packet
+
+  addSignatures: (signatures) ->
+    packet = Signed.create
+      packet: Packet.create
+        message: Message.create
+          signatures: []
+    for key, val of signatures
+      packet.packet.message.signatures.push Signature.create
+          utxo: key
+          signature: Signature.create {signature: val}
+    @packets.packet.push packet
+
+  getNewAddresses: () ->
+    packet.packet.message.str for packet in @packets.packet
+
+  getHashes: () ->
+    hashes = {}
+    for packet in @packets.packet
+      hashes[packet.packet.fromKey.key] = packet.packet.message.hash.hash.toString('utf8')
+    hashes
 
   clearPackets: () ->
     @packets = Packets.create {packet: []}
