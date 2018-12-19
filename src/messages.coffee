@@ -24,6 +24,12 @@ Invalid = message_root.lookupType "Invalid"
 Inputs = message_root.lookupType "Inputs"
 Packets = message_root.lookupType "Packets"
 
+valOrNull = () -> (method) -> ->
+  try
+    method.apply @, arguments
+  catch error
+    null
+
 class Messages
 
   constructor: () ->
@@ -114,6 +120,61 @@ class Messages
       hashes[packet.packet.fromKey.key] = packet.packet.message.hash.hash.toString('utf8')
     hashes
 
+  getSignaturesAndPackets: () ->
+    [
+      packet.signature.signature
+      Signed.encode(packet.packet).finish()
+      packet.packet.fromKey.key
+    ] for packet in @packets.packet
+
+  getPlayers: () ->
+    players = {}
+    for packet in @packets.packet
+      players[packet.packet.number] = packet.packet.fromKey.key
+    players
+
+  getBlame: () ->
+    packet.packet.message for packet in @packets.packet
+
+  getStrs: () ->
+    packet.packet.message.str for packet in @packets.packet
+
+  getSession: valOrNull() ->
+    @lastPacket().session
+
+  getNumber: valOrNull() ->
+    @lastPacket().packet.number
+
+  getEncryptionKey: valOrNull() ->
+    @lastPacket().packet.message.key.key
+
+  getAddress: valOrNull() ->
+    @lastPacket().packet.message.address.address
+
+  getFromKey: valOrNull() ->
+    @lastPacket().packet.message.fromKey.key
+
+  getToKey: valOrNull() ->
+    @lastPacket().packet.message.toKey.key
+
+  getPhase: valOrNull() ->
+    @lastPacket().packet.phase
+
+  getHash: valOrNull() ->
+    @lastPacket().packet.message.hash.hash
+
+  getStr: valOrNull() ->
+    @lastPacket().packet.message.str
+
+
+#========== misc ==================
+
+  lastPacket: () ->
+    if @packets.packet.length
+      @packets.packet[@packets.packet.length - 1]
+    else
+      throw new Error('no last packet')
+
   clearPackets: () ->
     @packets = Packets.create {packet: []}
 
@@ -123,5 +184,7 @@ class Messages
 
   deserialize: (buffer) ->
     @packets = Packets.decode(buffer)
+
+#============== Export ==============
 
 module.exports = Messages
