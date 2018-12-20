@@ -47,7 +47,7 @@ class Messages
 
   formAllPackets: (eck, session, number, vkFrom, vkTo, phase) ->
     for packet in @packets.packet
-      packet.packet.phase = Phase.values[do phase.toUpperCase]
+      packet.packet.phase = Phase.values[phase.toUpperCase()]
       packet.packet.session = session
       packet.packet.number = number
       packet.packet.fromKey = VerificationKey.create {key: vkFrom}
@@ -61,8 +61,49 @@ class Messages
       sig_bytes = Buffer.from sig, "base64"
       packet.signature = Signature.create {signature: sig_bytes}
 
+  generalBlame: (reason, accused) ->
+    @clearPackets()
+    packet = Signed.create
+      packet: Packet.create
+        message: Message.create
+          blame : Blame.create
+            accused: VerificationKey.create
+              key: accused
+        phase: Phase.values["BLAME"]
+    if reason.toString() in Object.keys(Reason.valuesById)
+      packet.packet.message.blame.reason = Reason.valuesById[reason.toString()]
+    @packets.packet.push packet
 
-  # generalBlame: (accused) ->
+  blameTheLiar: (accused) ->
+    @generalBlame Reason.values["LIAR"] ,accused
+
+  blameInsufficientFunds: (accused) ->
+    @generalBlame Reason.values["INSUFFICIENTFUNDS"] ,accused
+
+  blameEquivocationFailure: (accused, invalidPackets=null) ->
+    @generalBlame Reason.values["EQUIVOCATIONFAILURE"] ,accused
+    if invalidPackets
+      @lastPacket().packet.message.blame.invalid = Invalid.create {invalid: invalidPackets}
+
+  blameMissingOutputs: (accused) ->
+    @generalBlame Reason.values["MISSINGOUTPUT"] ,accused
+
+  blameShuffleFailure: (accused, hash) ->
+    @generalBlame Reason.values["SHUFFLEFAILURE"] ,accused
+    @lastPacket().packet.message.hash = Hash.create { hash: hash}
+
+  blameShuffleAndEquivocationFailure: (accused, encryptionKey, decryptionKey, invalidPackets) ->
+    @generalBlame Reason.values["SHUFFLEANDEQUIVOCATIONFAILURE"] ,accused
+    @lastPacket().packet.message.blame.invalid = Invalid.create {invalid: invalidPackets}
+    @lastPacket().packet.message.blame.key = DecryptionKey.create
+      key: decryptionKey
+      public: encryptionKey
+
+  blameInvalidSignature: (accused) ->
+    @generalBlame Reason.values["INVALIDSIGNATURE"] ,accused
+
+  blameWrongTransactionSignature: (accused) ->
+    @generalBlame Reason.values["INVALIDSIGNATURE"] ,accused
 
   addEncryptionKey: (ek, change) ->
     packet =
@@ -166,9 +207,46 @@ class Messages
   getStr: valOrNull() ->
     @lastPacket().packet.message.str
 
+  getInputs: valOrNull() ->
+    result = {}
+    for pubkey, val of @lastPacket().packet.message.inputs
+      result[pubkey] = val.coins
+    result
+
+  getSignatures: valOrNull() ->
+    result = {}
+    for signature in @lastPacket().packet.message.signatures
+      result[signature.utxo] = signature.signature.signature # Amen!
+    # console.log @lastPacket().packet.message.signatures
+    result
+
+  getBlameReason: valOrNull() ->
+    @lastPacket().packet.message.blame.reason
+
+  getAccusedKey: valOrNull() ->
+    @lastPacket().packet.message.blame.accused.key
+
+  getInvalidPackets: valOrNull() ->
+    @lastPacket().packet.message.blame.invalid.invalid
+
+  getPublicKey: valOrNull() ->
+    @lastPacket().packet.message.blame.key.public
+
+  getDecryptionKey: valOrNull() ->
+    @lastPacket().packet.message.blame.key.key
+
 
 #========== misc ==================
 
+  shufflePackets: () ->
+  # i got it from cookbook https://coffeescript-cookbook.github.io/chapters/arrays/shuffling-array-elements
+    i = @packets.packet.length
+    while --i > 0
+      j= ~~(Math.random() * (i + 1))
+      t = @packets.packet[j]
+      @packets.packet[j] = @packets.packet[i]
+      @packets.packet[i] = t
+        
   lastPacket: () ->
     if @packets.packet.length
       @packets.packet[@packets.packet.length - 1]

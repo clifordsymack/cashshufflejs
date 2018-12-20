@@ -52,6 +52,71 @@ describe "Messages", ->
       # Add signature verification later!
     do done
 
+  it 'should make a liar blame message', (done) ->
+    msgs = new messages
+    accused = "cheater"
+    msgs.blameTheLiar accused
+    eq msgs.packets.packet[0].packet.message.blame.reason, "LIAR"
+    do done
+
+  it 'should make a blame insufficient funds message', (done) ->
+    msgs = new messages
+    accused = "cheater"
+    msgs.blameInsufficientFunds accused
+    eq msgs.packets.packet[0].packet.message.blame.reason, "INSUFFICIENTFUNDS"
+    do done
+
+  it 'should make a blame equivocation failure message', (done) ->
+    msgs = new messages
+    accused = "cheater"
+    invalidPackets = Buffer.from "InvalidPackets"
+    msgs.blameEquivocationFailure accused, invalidPackets = invalidPackets
+    eq msgs.packets.packet[0].packet.message.blame.reason, "EQUIVOCATIONFAILURE"
+    eq msgs.packets.packet[0].packet.message.blame.invalid.invalid, invalidPackets
+    do done
+
+  it 'should make a blame missing output message', (done) ->
+    msgs = new messages
+    accused = "cheater"
+    msgs.blameMissingOutputs accused
+    eq msgs.packets.packet[0].packet.message.blame.reason, "MISSINGOUTPUT"
+    do done
+
+  it 'should make a blame shuffle failure message', (done) ->
+    msgs = new messages
+    accused = "cheater"
+    hash = Buffer.from "hash"
+    msgs.blameShuffleFailure accused, hash
+    eq msgs.packets.packet[0].packet.message.blame.reason, "SHUFFLEFAILURE"
+    eq msgs.packets.packet[0].packet.message.hash.hash, hash
+    do done
+
+  it 'should make a blame shuffle and equivocation failure message', (done) ->
+    msgs = new messages
+    accused = "cheater"
+    ek = "encryption key"
+    dk = "decryption key"
+    invalidPackets = Buffer.from "Invalid Packets"
+    msgs.blameShuffleAndEquivocationFailure accused, ek, dk, invalidPackets
+    eq msgs.packets.packet[0].packet.message.blame.reason, "SHUFFLEANDEQUIVOCATIONFAILURE"
+    eq msgs.packets.packet[0].packet.message.blame.key.key, dk
+    eq msgs.packets.packet[0].packet.message.blame.key.public, ek
+    do done
+
+  it 'should make a blame invalid signature message', (done) ->
+    msgs = new messages
+    accused = "cheater"
+    msgs.blameInvalidSignature accused
+    eq msgs.packets.packet[0].packet.message.blame.reason, "INVALIDSIGNATURE"
+    do done
+
+  it 'should make a blame wrong transaction signature message', (done) ->
+    msgs = new messages
+    accused = "cheater"
+    msgs.blameInvalidSignature accused
+    eq msgs.packets.packet[0].packet.message.blame.reason, "INVALIDSIGNATURE"
+    do done
+
   it 'should add an encryption key', (done) ->
     msgs = new messages
     ek = 'some encryption key'
@@ -237,4 +302,60 @@ describe "Messages", ->
     str = Buffer.from("hash")
     msgs.addStr(str)
     eq msgs.getStr(), str
+    do done
+
+  it 'should get inputs', (done) ->
+    msgs = new messages
+    msgs.addStr("1")
+    inputs =
+      'pubkey_1': [ "hash11", "hash12" ]
+      'pubkey_2': [ "hash21", "hash22" ]
+    msgs.addInputs inputs
+    assert.deepEqual msgs.getInputs(), inputs
+    do done
+
+  it 'should get signatures', (done) ->
+    msgs = new messages
+    msgs.addStr("1")
+    signatures =
+      "hash1": Buffer.from "12345678", "hex"
+      "hash2": Buffer.from "90ABCDEF", "hex"
+    msgs.addSignatures signatures
+    assert.deepEqual msgs.getSignatures(), signatures
+    do done
+
+  it 'should get blame reason', (done) ->
+    msgs = new messages
+    msgs.addStr("1")
+    blame = 3 #SHUFFLEFAILURE
+    msgs.generalBlame blame, 3
+    eq msgs.getBlameReason(), "ShuffleFailure".toUpperCase()
+    do done
+
+  it 'should get accused key', (done) ->
+    msgs = new messages
+    msgs.addStr("1")
+    accused = "cheater"
+    msgs.generalBlame 1, accused
+    eq msgs.getAccusedKey(), accused
+    do done
+
+  it 'should get invalid packets and keys', (done) ->
+    msgs = new messages
+    msgs.addStr("1")
+    invalidPackets = Buffer.from "InvalidPackets"
+    encryptionKey = "encryption key"
+    decryptionKey = "decryption key"
+    msgs.blameShuffleAndEquivocationFailure "accused", encryptionKey, decryptionKey, invalidPackets
+    eq msgs.getInvalidPackets(), invalidPackets
+    eq msgs.getPublicKey(), encryptionKey
+    eq msgs.getDecryptionKey(), decryptionKey
+    do done
+
+  it 'should shuffle packets', (done) ->
+    msgs = new messages
+    strs = [1..10].map (x)-> x.toString()
+    msgs.addStr(str) for str in strs
+    msgs.shufflePackets()
+    assert.notDeepEqual msgs.getStrs(), strs
     do done
