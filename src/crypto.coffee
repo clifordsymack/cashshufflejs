@@ -56,10 +56,10 @@ class Crypto
     if encrypted.length < 85
       throw "invalid ciphertext: length"
     [magic, ephemeralPubkey, ciphertext, mac] = [
-      encrypted[..3]
-      encrypted[4..36]
-      encrypted[37..-33]
-      encrypted[-32..]
+      encrypted[..3] # magic
+      encrypted[4..36] # ephemeralPubkey
+      encrypted[37..-33] # ciphertext
+      encrypted[-32..] # mac
       ]
     if magic.toString() != "BIE1"
       throw "invalid ciphertext: invalid magic bytes"
