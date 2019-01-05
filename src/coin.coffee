@@ -94,6 +94,7 @@ class Coin
     new Promise (resolve, reject) ->
       promises = []
       players = []
+      txIns = {}
       for player, inputs of allInputs
         players.push player
         promises.push getCoins(inputs)
@@ -105,6 +106,7 @@ class Coin
           amounts[players[i]] = 0
           for pubkey, coins of inputs
             for coin, output of coins
+              txIns[coin] = pubkey
               amounts[players[i]] += output.satoshis
               utxos.push Transaction.UnspentOutput(output)
         utxos.sort (a, b) ->
@@ -119,14 +121,17 @@ class Coin
           tx.to getLegacyAddress(output[0]), output[1]
         for input in tx.inputs
           input.sequenceNumber = 0xfffffffe # fix sequence number for EC compatibility
+          txIn = input.prevTxId.toString('hex')+ ":" + input.outputIndex
+          input.setScript Script("21" + txIns[txIn])
+        # console.log tx.inputs
         resolve tx
       .catch (error) ->
         reject error
 
   getTransactionSignature: (transaction, inputs, secretKeys) ->
     signatures = {}
-    for pubkey, privkey of secretKeys
-      # console.log transaction
+    inputsPubkeys =  Object.keys inputs
+    for pubkey, privkey of secretKeys when pubkey in inputsPubkeys
       for signature in transaction.getSignatures(privkey)
         txHash = signature.prevTxId.toString('hex') + ":" + signature.outputIndex
         inputSignature = Buffer.from(signature.signature.toString() + "41", 'utf-8') # nHashType == 65 only for now.
@@ -134,6 +139,13 @@ class Coin
         temp[txHash] = inputSignature
         Object.assign signatures, temp
     signatures
+
+  addTransactionSignatures: (transaction, signatures) ->
+    for input in transaction.inputs
+      txIn = input.prevTxId.toString('hex') + ":" + input.outputIndex
+      pubkey = (input._scriptBuffer.toString 'hex')[2..]
+      signature = Buffer.from signatures[txIn].toString('utf-8')[..-2], 'hex'
+      input.setScript Script.buildPublicKeyHashIn(pubkey, signature, 0x41)
 
 module.exports = Coin
 

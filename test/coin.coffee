@@ -3,7 +3,7 @@ eq = assert.equal
 
 Coin = require '../src/coin.coffee'
 
-{ PrivateKey, Transaction } = require 'bitcoincashjs-fork'
+{ PrivateKey, Transaction, Script } = require 'bitcoincashjs-fork'
 
 class FakeBlockchain
   @_blockchain: {}
@@ -176,4 +176,70 @@ describe "Coin", ->
       assert.deepEqual signatures['a2e85c628edb9ab4b29e55b17f69ab2af652e186ec38eb650381e87c370a7721:2'] , Buffer.from("304402204167fa3ac782d5df521bc67eb28c4a70b1087a77dbe623971b13d1cd781b358d02204ef68fbc7e2a188c4065e72809bfb1638c118ad8d5e495e921085d5e7d77aa4141", 'utf-8')
     .catch (error) ->
       console.log(error)
+    do done
+
+
+  it 'should add transaction signature', (done) ->
+    FakeBlockchain.addCoins {
+      "a2e85c628edb9ab4b29e55b17f69ab2af652e186ec38eb650381e87c370a7721:2":
+        txId: 'a2e85c628edb9ab4b29e55b17f69ab2af652e186ec38eb650381e87c370a7721'
+        outputIndex: 2
+        address: '19GSh5YLTZeExwcgJy6dhVxt43aE6vuxd2'
+        script: '76a9145aacb1040a3c8e67ad7f1205001d2f08c6cb784d88ac'
+        satoshis: 4000
+        is_spent: true
+      'd5fa351d731f4c8248beed455663afe0a8b7e4c69180e8e9bda2e9d9ef876493:2':
+        txId: 'd5fa351d731f4c8248beed455663afe0a8b7e4c69180e8e9bda2e9d9ef876493'
+        outputIndex: 2
+        address: '12FyjDmqAsyyM9UPzzx6r4XR8rAELc7b85'
+        script: '76a9140dcd4da7f6007c2d9f988fe3001a6561c6297ce388ac'
+        satoshis: 98000
+        is_spent: true
+      '43987285aa84d576878cad3a33bbb46aec4fdbb21dab3a105e7e6b4c577e271d:4':
+        txId: '43987285aa84d576878cad3a33bbb46aec4fdbb21dab3a105e7e6b4c577e271d'
+        outputIndex: 4
+        address: '13dCAf7VQ78eBhJhYTmEy3G9bqwt3VpH2J'
+        script: '76a9141cc88c2a274e1f434cf72e04c42e6ab2db853e4f88ac'
+        satoshis: 4500
+        is_spent: true
+    }
+    coin = new Coin
+    coin.getCoins = (inputs) -> FakeBlockchain.getCoins(inputs)
+    inputs =
+      "player_vk_1":
+        '0236ceb580e9613ff718f17f3f1294508c68decf848b23cca7c75c2ed49ec69601':
+          ["a2e85c628edb9ab4b29e55b17f69ab2af652e186ec38eb650381e87c370a7721:2"]
+      "player_vk_2":
+        "029b8a2373a5ba52817527e092be091fdbac499cf160d048d1966161a1fec30842":
+          ["d5fa351d731f4c8248beed455663afe0a8b7e4c69180e8e9bda2e9d9ef876493:2"]
+      "player_vk_3":
+        "02ecd2a2911b1099daedc950dc03e9ee867969c8aec06d464a0c144427aa99cf13":
+          ["43987285aa84d576878cad3a33bbb46aec4fdbb21dab3a105e7e6b4c577e271d:4"]
+    outputs = [
+      "qzuqmss357hfux4d9gxg68yxgh2rtzc9xq020lzw0m"
+      "qrwr23lu7x072ztsjcvsqyjkdsn7cvvjeuac7hrz03"
+      "qzkffzh8uyvmq0qf0qer6g7a4azjfdg98u28cf4amv"
+    ]
+    changes =
+      "player_vk_1": "qqwv3rp2ya8p7s6v7uhqf3pwd2edhpf7fuhhq25del"
+      "player_vk_2": "qpd2evgypg7guead0ufq2qqa9uyvdjmcf59k4kkwgk"
+      "player_vk_3": "qqxu6nd87cq8ctvlnz87xqq6v4suv2tuuvyyvre3x8"
+    secretKeys =
+      '0236ceb580e9613ff718f17f3f1294508c68decf848b23cca7c75c2ed49ec69601': PrivateKey "L14e78QaSvDFxbQ3LzmSB9dAEc5ovWKWRKS8M7GRK7SNCahcsK5G"
+      '029b8a2373a5ba52817527e092be091fdbac499cf160d048d1966161a1fec30842': PrivateKey "KwFKucGdN3Hm6DDt5WXNrQFTq3yjA4qhPnX5SSgy48xakqSjoStc"
+      '02ecd2a2911b1099daedc950dc03e9ee867969c8aec06d464a0c144427aa99cf13': PrivateKey "KyosLtEDSTpenNju7ku5uKrB87NLa2CCgT4DpSPBvFHhZwjQeAn3"
+    coin.makeUnsignedTransaction 1000, 300, inputs, outputs, changes
+    .then (tx) ->
+      signatures = {}
+      for player, playerInputs of inputs
+        Object.assign signatures, coin.getTransactionSignature(tx, playerInputs, secretKeys)
+      tx2 = Transaction(tx.toObject())
+      tx2.sign(secretKeys['0236ceb580e9613ff718f17f3f1294508c68decf848b23cca7c75c2ed49ec69601'])
+      tx2.sign(secretKeys['029b8a2373a5ba52817527e092be091fdbac499cf160d048d1966161a1fec30842'])
+      tx2.sign(secretKeys['02ecd2a2911b1099daedc950dc03e9ee867969c8aec06d464a0c144427aa99cf13'])
+      coin.addTransactionSignatures tx, signatures
+      eq tx.toString(), tx2.toString()
+
+    .catch (error) ->
+      throw error
     do done
