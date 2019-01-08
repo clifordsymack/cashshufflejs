@@ -1,5 +1,5 @@
 https = require 'https'
-{ Transaction, Address, Script } = require 'bitcoincashjs-fork'
+{ Transaction, Address, Script, crypto, PublicKey } = require 'bitcoincashjs-fork'
 
 
 blockchairEndpoint = 'https://api.blockchair.com/bitcoin-cash/dashboards/transaction/'
@@ -59,6 +59,8 @@ getCoins = (inputs) ->
       resolve coins
     .catch (error) ->
       reject error
+
+inputName = (input) -> input.prevTxId.toString('hex')+ ":" + input.outputIndex
 
 
 class Coin
@@ -121,9 +123,8 @@ class Coin
           tx.to getLegacyAddress(output[0]), output[1]
         for input in tx.inputs
           input.sequenceNumber = 0xfffffffe # fix sequence number for EC compatibility
-          txIn = input.prevTxId.toString('hex')+ ":" + input.outputIndex
+          txIn = inputName input
           input.setScript Script("21" + txIns[txIn])
-        # console.log tx.inputs
         resolve tx
       .catch (error) ->
         reject error
@@ -133,7 +134,7 @@ class Coin
     inputsPubkeys =  Object.keys inputs
     for pubkey, privkey of secretKeys when pubkey in inputsPubkeys
       for signature in transaction.getSignatures(privkey)
-        txHash = signature.prevTxId.toString('hex') + ":" + signature.outputIndex
+        txHash = inputName signature
         inputSignature = Buffer.from(signature.signature.toString() + "41", 'utf-8') # nHashType == 65 only for now.
         temp = {}
         temp[txHash] = inputSignature
@@ -142,10 +143,26 @@ class Coin
 
   addTransactionSignatures: (transaction, signatures) ->
     for input in transaction.inputs
-      txIn = input.prevTxId.toString('hex') + ":" + input.outputIndex
+      txIn = inputName input
       pubkey = (input._scriptBuffer.toString 'hex')[2..]
       signature = Buffer.from signatures[txIn].toString('utf-8')[..-2], 'hex'
       input.setScript Script.buildPublicKeyHashIn(pubkey, signature, 0x41)
+
+  verifyTransactionSignature: (signature, transaction, verificationKey, txHash) ->
+    inputIndex = transaction
+                 .inputs
+                 .map inputName
+                 .indexOf txHash
+    if inputIndex > 0
+      signatureCrypto = crypto.Signature.fromTxFormat Buffer.from(signature.toString('utf-8'), 'hex')
+      signatureObject =
+        signature: signatureCrypto
+        publicKey: PublicKey verificationKey
+        inputIndex: inputIndex
+        sigtype: signatureCrypto.nhashtype
+      transaction.inputs[inputIndex].isValidSignature transaction, signatureObject
+    else
+      false
 
 module.exports = Coin
 
