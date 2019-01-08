@@ -164,7 +164,7 @@ class Messages
   getSignaturesAndPackets: () ->
     [
       packet.signature.signature
-      Signed.encode(packet.packet).finish()
+      Packet.encode(packet.packet).finish()
       packet.packet.fromKey.key
     ] for packet in @packets.packet
 
@@ -246,7 +246,7 @@ class Messages
       t = @packets.packet[j]
       @packets.packet[j] = @packets.packet[i]
       @packets.packet[i] = t
-        
+
   lastPacket: () ->
     if @packets.packet.length
       @packets.packet[@packets.packet.length - 1]

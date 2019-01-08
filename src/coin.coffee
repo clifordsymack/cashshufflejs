@@ -1,5 +1,5 @@
 https = require 'https'
-{ Transaction, Address, Script, crypto, PublicKey } = require 'bitcoincashjs-fork'
+{ Transaction, Address, Script, crypto, PublicKey, Message } = require 'bitcoincashjs-fork'
 
 
 blockchairEndpoint = 'https://api.blockchair.com/bitcoin-cash/dashboards/transaction/'
@@ -163,6 +163,14 @@ class Coin
       transaction.inputs[inputIndex].isValidSignature transaction, signatureObject
     else
       false
+
+  verifySignature: (signature, message, verificationKey) ->
+    address = PublicKey(verificationKey).toAddress()
+    messageBase64 = message.toString 'base64'
+    signatureBase64 = signature.toString 'base64'
+    Message messageBase64
+    .verify address, signatureBase64
+
 
 module.exports = Coin
 

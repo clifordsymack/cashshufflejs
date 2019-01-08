@@ -2,6 +2,8 @@ assert = require 'assert'
 eq = assert.equal
 
 Coin = require '../src/coin.coffee'
+messages = require '../src/messages.coffee'
+
 
 { PrivateKey, Transaction, Script, crypto } = require 'bitcoincashjs-fork'
 
@@ -308,4 +310,21 @@ describe "Coin", ->
       assert.ok not coin.verifyTransactionSignature(signature, tx, pubkey2, txHash)
     .catch (error) ->
       throw error
+    do done
+
+  it 'should verify signature', (done) ->
+    coin = new Coin
+    msgs = new messages
+    eck = PrivateKey()
+    session = new Buffer('somesession')
+    number = 1
+    vkFrom = eck.toPublicKey().toString()
+    vkTo = "key to"
+    phase = "announcement"
+    msgs.addStr "test"
+    msgs.formAllPackets eck, session, number, vkFrom, vkTo, phase
+    [signature, message, fromPubkey] = msgs.getSignaturesAndPackets()[0]
+    fakePubkey = PrivateKey().toPublicKey().toString()
+    assert.ok coin.verifySignature signature, message, fromPubkey
+    assert.ok not coin.verifySignature signature, message, fakePubkey
     do done
