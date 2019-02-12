@@ -1,15 +1,18 @@
 url = require "url"
 http = require "http"
 https = require "https"
-# Инициализировать класс
-# Выбрать клиент в зависимости от пути
+WebSocket = require "ws"
 # Получение от сервера инфы
 # Если данные, то брать их и класть в очередь
 # Если отправка, запаковывать и отправлять
 
+magic = Buffer.from "42bcc32669467873", "hex"
+
 class Comms
 
   constructor: (@path) ->
+    @incomeBuffer = Buffer.alloc 0
+    @result = []
 
   checkProtocol: () ->
     protocol = url.parse(@path).protocol
@@ -37,6 +40,53 @@ class Comms
         res.on "end", () ->
           resolve JSON.parse(rawData)
       .on "error", (error) ->
+        reject error
+
+  setupWebsocket: () ->
+    @getStats()
+    .then (res) => # using this type of arrow => instead of -> allows you to modify the class context
+      @wsPort = res.shuffleWebSocketPort
+    .catch (error) ->
+      throw error
+
+  parseMessage: () ->
+    while @incomeBuffer.length > 12
+      if @incomeBuffer[...8].toString('hex') != magic.toString('hex')
+        throw new Error("bad magic word")
+      messageLength = @incomeBuffer[8...12].readUInt32BE()
+      if @incomeBuffer[12...].length >= messageLength
+        @incomeBuffer = @incomeBuffer[12...]
+        @result.push @incomeBuffer[...messageLength]
+        @incomeBuffer = @incomeBuffer[messageLength...]
+      else
+        break
+
+  send: (message) ->
+    lengthSuffix = Buffer.alloc 4
+    lengthSuffix.writeUIntBE message.length, 0, 4
+    try
+      @wsClient.send Buffer.concat [magic, lengthSuffix, message]
+    catch error
+      new Error("unable to send to socket")
+    console.log lengthSuffix
+
+  makeConnection: (greetingMessage) ->
+    new Promise (resolve, reject) =>
+      { hostname, protocol }  = url.parse(@path)
+      wsProtocol = if @ssl then "wss:" else "ws:"
+      wsPath = wsProtocol+ "//"+ hostname + ":" + @wsPort + "/"
+      origin = protocol + "//" + hostname + ":" + @wsPort + "/"
+      @wsClient = new WebSocket(wsPath , {origin: origin})
+
+      @wsClient.on 'open', () =>
+        @send greetingMessage
+        resolve true
+
+      @wsClient.on 'message', (msg) =>
+        @incomeBuffer = Buffer.concat([@incomeBuffer, msg])
+        @parseMessage()
+
+      @wsClient.on 'error', (error) =>
         reject error
 
 

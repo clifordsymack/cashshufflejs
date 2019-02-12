@@ -2,8 +2,8 @@ const WebSocket = require('ws');
 
 const magic = "42bcc32669467873";
 
-const client = new WebSocket('wss://cashshuffle.c3-soft.com:1338/',{
-  origin:'https://cashshuffle.c3-soft.com'
+const client = new WebSocket('ws://localhost:1338',{
+  origin:'http://localhost'
 });
 
 client.on('open', function open() {
