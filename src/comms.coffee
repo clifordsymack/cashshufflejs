@@ -2,6 +2,7 @@ url = require "url"
 http = require "http"
 https = require "https"
 WebSocket = require "ws"
+queue = require "queue"
 # Получение от сервера инфы
 # Если данные, то брать их и класть в очередь
 # Если отправка, запаковывать и отправлять
@@ -12,7 +13,8 @@ class Comms
 
   constructor: (@path) ->
     @incomeBuffer = Buffer.alloc 0
-    @result = []
+    @result = queue()
+    @inchan = []
 
   checkProtocol: () ->
     protocol = url.parse(@path).protocol
@@ -56,7 +58,9 @@ class Comms
       messageLength = @incomeBuffer[8...12].readUInt32BE()
       if @incomeBuffer[12...].length >= messageLength
         @incomeBuffer = @incomeBuffer[12...]
-        @result.push @incomeBuffer[...messageLength]
+        @result.push (cb) =>
+          @inchan.push @incomeBuffer[...messageLength]
+          cb()
         @incomeBuffer = @incomeBuffer[messageLength...]
       else
         break

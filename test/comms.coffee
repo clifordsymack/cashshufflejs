@@ -87,8 +87,30 @@ describe "Comms", ->
       new Promise (resolve) ->
         setTimeout(resolve, 10)
     .then (result) ->
-      console.log comms.result
       comms.wsClient.close()
+    .catch (error) ->
+      console.log error
+      assert.ok false
+    do done
+
+  it 'should provide queue object for subscribing to incomes', (done) ->
+    hi_msg = new Buffer.from("0a120a101a090a07736f6d656b65793a0308e807", "hex");
+    comms = new Comms("http://localhost:8080")
+    comms.result.on "success", (result, job) ->
+      assert.ok true
+    # console.log comms.result
+    comms.checkProtocol()
+    comms.setupWebsocket()
+    .then (result) ->
+      comms.makeConnection hi_msg
+    .then (result) ->
+      new Promise (resolve) ->
+        setTimeout(resolve, 100)
+    .then (result) ->
+      comms.wsClient.close()
+      comms.result.start (err) ->
+        if err
+          throw err
     .catch (error) ->
       console.log error
       assert.ok false
