@@ -4,7 +4,8 @@
   "description": "cashshuffle implementation in javascript",
   "main": "./index.js",
   "scripts": {
-    "test": "mocha \"test/**/*.coffee\""
+    "test": "mocha \"test/**/*.coffee\"",
+    "prepublish": "coffee -c -o lib src"
   },
   "keywords": [
     "cashshuffle"
