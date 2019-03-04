@@ -14,6 +14,7 @@ class Comms
   constructor: (@path) ->
     @incomeBuffer = Buffer.alloc 0
     @result = queue()
+    @result.on "success", (result, job) =>
     @inchan = []
 
   checkProtocol: () ->
@@ -73,6 +74,13 @@ class Comms
     catch error
       new Error("unable to send to socket")
     console.log lengthSuffix
+
+  recv: () ->
+    new Promise (resolve, reject) =>
+      @result.start (err) =>
+         if err
+           reject err
+        resolve @inchan.pop()
 
   makeConnection: (greetingMessage) ->
     new Promise (resolve, reject) =>

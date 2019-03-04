@@ -96,9 +96,6 @@ describe "Comms", ->
   it 'should provide queue object for subscribing to incomes', (done) ->
     hi_msg = new Buffer.from("0a120a101a090a07736f6d656b65793a0308e807", "hex");
     comms = new Comms("http://localhost:8080")
-    comms.result.on "success", (result, job) ->
-      assert.ok true
-    # console.log comms.result
     comms.checkProtocol()
     comms.setupWebsocket()
     .then (result) ->
@@ -108,9 +105,15 @@ describe "Comms", ->
         setTimeout(resolve, 100)
     .then (result) ->
       comms.wsClient.close()
-      comms.result.start (err) ->
-        if err
-          throw err
+      comms.inchan.push "something else"
+      comms.recv()
+    .then (result) ->
+      comms.recv()
+    .then (result) ->
+      comms.recv()
+    .then (result) ->
+      comms.recv()
+      assert.ok true
     .catch (error) ->
       console.log error
       assert.ok false
